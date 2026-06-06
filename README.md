@@ -50,13 +50,18 @@ Tip: voeg hem toe aan je beginscherm via "Delen → Zet op beginscherm".
 
 ## 💾 Data bewaren tussen sessies
 
-Streamlit Cloud heeft **geen permanente opslag** per sessie.  
-Zo bewaar je je posities:
+De app slaat je posities automatisch op in `mijn_posities.csv` in dezelfde map als `app.py`.  
+Dit bestand wordt bij elke herstart automatisch ingelezen — **je hoeft niets te doen**.
 
-1. Voeg je posities in via **➕ Toevoegen**
-2. Ga naar **💾 Data** → download `mijn_posities.csv`
-3. Bewaar dit bestand op je telefoon/PC
-4. Bij een nieuwe sessie: upload het terug via **📥 Importeer CSV**
+### Hoe werkt het op Streamlit Cloud?
+- Je voegt een positie toe → de app schrijft direct naar `mijn_posities.csv` op de server
+- Je herstart de app → `init_state()` leest het bestand automatisch in
+- Je data blijft bewaard **zolang de app op dezelfde server draait**
+
+### Backup maken (aanbevolen)
+Streamlit Cloud kan apps herdeployen bij updates, waardoor de server-CSV gereset wordt.  
+Maak daarom regelmatig een backup via **💾 Data → Download mijn_posities.csv**.  
+Bij een reset: upload het bestand terug via **📥 Importeer CSV** — dan ben je in 1 klik hersteld.
 
 ---
 
