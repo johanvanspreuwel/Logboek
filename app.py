@@ -23,6 +23,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# Zorg dat unsafe_allow_html werkt door een test te doen
+# (Streamlit Cloud ondersteunt dit standaard, maar sommige versies niet)
+_HTML_TEST = True
+
 # ─────────────────────────────────────────────
 #  CONSTANTEN
 # ─────────────────────────────────────────────
@@ -299,11 +303,9 @@ def gecachte_koersen(tickers_tuple: tuple) -> dict:
                 if markt_staat in ("REGULAR", "OPEN") and reg:
                     prijs, fase, label = float(reg), "OPEN", "🟢 Live"
                 elif markt_staat in ("PRE", "PREPRE") and pre:
-                    prijs, fase = float(pre), "PRE"
-                    label = f"🌅 Pre ({symbool(valuta)}{float(pre):,.4f})"
+                    prijs, fase, label = float(pre), "PRE", "🌅 Pre-market"
                 elif markt_staat in ("POST", "POSTPOST") and post:
-                    prijs, fase = float(post), "POST"
-                    label = f"🌙 After ({symbool(valuta)}{float(post):,.4f})"
+                    prijs, fase, label = float(post), "POST", "🌙 After-hours"
                 elif reg:
                     prijs, fase, label = float(reg), "GESLOTEN", "🔒 Sluit"
             except Exception:
@@ -594,51 +596,49 @@ with tab_portfolio:
                     pnl_str    = "—"; pnl_sub = ""; pnl_kleur_pos = "#7d8590"
                     valuta_badge = ""; fx_info = ""
 
-                st.markdown(f"""
-                <div class="pos-card">
-                  <div>
-                    <span class="pos-ticker">{ticker}</span>
-                    {valuta_badge}
-                    <span class="pos-markt clr-muted">{markt_lbl}</span>
-                  </div>
-                  {fx_info}
-                  <div class="pos-row">
-                    <span class="pos-key">Huidig</span>
-                    <span class="pos-val">{koers_str}</span>
-                  </div>
-                  <div class="pos-row">
-                    <span class="pos-key">Instap</span>
-                    <span class="pos-val clr-blue">{instap_str}</span>
-                  </div>
-                  <div class="pos-row">
-                    <span class="pos-key">Rendement</span>
-                    <span class="pos-val" style="color:{rend_kleur}">{rend_str}</span>
-                  </div>
-                  <div class="pos-row">
-                    <span class="pos-key">P&L (EUR)</span>
-                    <span class="pos-val" style="color:{pnl_kleur_pos}">{pnl_str}{pnl_sub}</span>
-                  </div>
-                  <div class="pos-row">
-                    <span class="pos-key">Aantal</span>
-                    <span class="pos-val">{aantal:g}</span>
-                  </div>
-                  <div class="pos-row">
-                    <span class="pos-key">Stop Loss</span>
-                    <span class="pos-val clr-red">{sl_str}</span>
-                  </div>
-                  <div class="pos-row">
-                    <span class="pos-key">Take Profit</span>
-                    <span class="pos-val clr-green">{tp_str}</span>
-                  </div>
-                  <div class="pos-row">
-                    <span class="pos-key">Datum</span>
-                    <span class="pos-val clr-muted">{datum}</span>
-                  </div>
-                  <div style="margin-top:8px">
-                    <span class="pos-status {status_cls}">{status_txt}</span>
-                  </div>
-                </div>
-                """, unsafe_allow_html=True)
+                # Bouw kaart op als losse rijen — betrouwbaarder dan één grote HTML blob
+                header_html = (
+                    f'<div style="background:#161b22;border:1px solid #30363d;'
+                    f'border-radius:10px;padding:14px 16px 4px 16px;margin-bottom:2px">'
+                    f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+                    f'<span style="font-size:18px;font-weight:bold;color:#58a6ff">{ticker}</span>'
+                    f'{"<span style=\"background:#21262d;color:#7d8590;font-size:9px;padding:1px 5px;border-radius:4px\">" + valuta + "</span>" if valuta not in ("EUR","—") else ""}'
+                    f'<span style="font-size:11px;color:#7d8590">{markt_lbl}</span>'
+                    f'</div>'
+                    f'{"<div style=\"color:#7d8590;font-size:10px;margin-bottom:6px\">1 " + valuta + " = &#8364; " + f"{fx:.4f}" + "</div>" if valuta not in ("EUR","—") else ""}'
+                    f'</div>'
+                )
+                rijen_html = ""
+                for _k, _v, _kleur in [
+                    ("Huidig",      koers_str,    "#e6edf3"),
+                    ("Instap",      instap_str,   "#58a6ff"),
+                    ("Rendement",   rend_str,     rend_kleur),
+                    ("P&amp;L (EUR)", pnl_str + pnl_sub, pnl_kleur_pos),
+                    ("Aantal",      f"{aantal:g}", "#e6edf3"),
+                    ("Stop Loss",   sl_str,       "#f85149"),
+                    ("Take Profit", tp_str,       "#3fb950"),
+                    ("Datum",       datum,        "#7d8590"),
+                ]:
+                    rijen_html += (
+                        f'<div style="display:flex;justify-content:space-between;'
+                        f'margin-top:6px;font-size:13px;padding:0 16px">'
+                        f'<span style="color:#7d8590">{_k}</span>'
+                        f'<span style="font-weight:bold;color:{_kleur}">{_v}</span>'
+                        f'</div>'
+                    )
+                voet_html = (
+                    f'<div style="padding:10px 16px 14px 16px">'
+                    f'<span style="background:#21262d;padding:4px 10px;border-radius:6px;'
+                    f'font-size:12px;font-weight:bold;color:'
+                    f'{"#f85149" if "SL" in status_txt else "#e3b341" if "BIJNA" in status_txt or "DICHTBIJ" in status_txt else "#3fb950"}">'
+                    f'{status_txt}</span></div>'
+                )
+                wrapper = (
+                    f'<div style="background:#161b22;border:1px solid #30363d;'
+                    f'border-radius:10px;margin-bottom:10px;overflow:hidden">'
+                    f'{header_html}{rijen_html}{voet_html}</div>'
+                )
+                st.markdown(wrapper, unsafe_allow_html=True)
 
                 if st.button(f"🗑️ Verwijder {ticker}", key=f"del_{i}_{ticker}"):
                     verwijder_rij(i)
