@@ -8,6 +8,7 @@
 import math
 import datetime
 import os
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import yfinance as yf
@@ -440,7 +441,7 @@ with tab_portfolio:
         with st.spinner("Koersen ophalen..."):
             koersen = gecachte_koersen(tuple(tickers))
         st.session_state.koersen = koersen
-        nu = datetime.datetime.now().strftime("%H:%M:%S")
+        nu = datetime.datetime.now(ZoneInfo("Europe/Amsterdam")).strftime("%H:%M:%S")
         fases = [v["label"] for v in koersen.values()]
         valuta_set = list(set(v["valuta"] for v in koersen.values()))
         with col_status:
